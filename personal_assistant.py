@@ -238,8 +238,67 @@ def manage_contacts():
 
     else:
         print("Некорректный ввод. Пожалуйста, попробуйте снова.")
-
  
+
+def manage_finances():
+    finance_record = FinanceRecord(0, 0.0, '', '', '')
+    message = '1. Добавление новой финансовой записи.\n2. Просмотр всех записей.\n3. Генерация отчётов о финансовой активности за определённый период.\n4. Импорт и экспорт финансовых записей в формате CSV.\n5. Вернуться в меню'
+    print(message)
+    choice = input("Введите номер действия: ")
+    if choice == '1':
+        amount = float(input("Введите сумму операции (положительное число для доходов, отрицательное для расходов): "))
+        category = input("Введите категорию операции: ")
+        date = input("Введите дату операции в формате ДД-ММ-ГГГГ: ")
+        description = input("Введите описание операции: ")
+        
+        if not os.path.exists('finance.json'):
+            record_id = 1
+        else:
+            with open('finance.json', 'r', encoding='utf-8') as f:
+                records_data = json.load(f)
+                record_id = len(records_data) + 1
+        
+        finance_record.create_record(record_id,     amount, category, date, description)
+
+    elif choice == '2':
+        date_filter = input("Введите дату для фильтрации (или оставьте пустым): ")
+        category_filter = input("Введите категорию для фильтрации (или оставьте пустым): ")
+        filtered_records = finance_record.filter_records(date_filter or None, category_filter or None)
+        records_info = finance_record.view_records(filtered_records)
+        if records_info:
+            for rec in records_info:
+                print(f"ID: {rec[0]}, Сумма: {rec[1]}, Категория: {rec[2]}, Дата: {rec[3]}, Описание: {rec[4]}")
+        else:
+            print("Нет финансовых записей.")
+
+    elif choice == '3':
+        start_date = input("Введите начальную дату в формате ДД-ММ-ГГГГ: ")
+        end_date = input("Введите конечную дату в формате ДД-ММ-ГГГГ: ")
+        
+        report = finance_record.generate_report(start_date, end_date)
+        print("Отчет за указанный период:")
+        print(report)
+
+    elif choice == '4':
+        msg = '\n1. Импорт\n2. Экспорт'
+        print(msg)
+        chc = input("Введите номер действия: ")
+        
+        if chc == '1':
+            filename = input("Введите название CSV файла для импорта: ")
+            finance_record.import_from_csv(filename)
+
+        elif chc == '2':
+            filename = input("Введите название CSV файла для экспорта: ")
+            finance_record.export_to_csv(filename)
+
+    elif choice == '5':
+        print("Выход в главное меню")
+        menu()
+
+    else:
+        print("Некорректный ввод. Пожалуйста, попробуйте снова.")
+
 
 class Note:
     def __init__(self, id:int, title:str, content:str, timestamp:str) -> None:
@@ -461,6 +520,83 @@ class Contact:
                 contacts_data = json.load(f)
                 self.contacts = [Contact(**contact) for contact in contacts_data]
 
+
+class FinanceRecord:
+    def __init__(self, id: int, amount: float, category: str, date: str, description: str) -> None:
+        self.id = id
+        self.amount = amount
+        self.category = category
+        self.date = date
+        self.description = description
+        self.records = []
+
+    def create_record(self, amount: float, category: str, date: str, description: str) -> None:
+        record_id = len(self.records) + 1
+        new_record = FinanceRecord(record_id, amount, category, date, description)
+        self.records.append(new_record)
+        self.save_records()
+
+    def view_records(self, records_list=None) -> list:
+        if not records_list:
+            return [(record.id, record.amount, record.category, record.date, record.description) for record in self.records]
+        else:
+            return [(record.id, record.amount, record.category, record.date, record.description) for record in records_list]
+
+    def filter_records(self, date: str = None, category: str = None) -> list:
+        filtered_records = self.records
+        if date:
+            filtered_records = [record for record in filtered_records if record.date == date]
+        if category:
+            filtered_records = [record for record in filtered_records if record.category.lower() == category.lower()]
+        return filtered_records
+
+    def generate_report(self, start_date: str, end_date: str) -> dict:
+        report = {
+            'total_income': 0.0,
+            'total_expense': 0.0,
+            'balance': 0.0,
+            'income_by_category': {},
+            'expense_by_category': {}
+        }
+        
+        for record in self.records:
+            if start_date <= record.date <= end_date:
+                if record.amount > 0:
+                    report['total_income'] += record.amount
+                    report['income_by_category'][record.category] = report['income_by_category'].get(record.category, 0) + record.amount
+                else:
+                    report['total_expense'] += abs(record.amount)
+                    report['expense_by_category'][record.category] = report['expense_by_category'].get(record.category, 0) + abs(record.amount)
+
+        report['balance'] = report['total_income'] - report['total_expense']
+        return report
+
+    def import_from_csv(self, filename='finance.csv') -> None:
+        with open(filename, mode='r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                amount = float(row['Amount'])
+                category = row['Category']
+                date = row['Date']
+                description = row['Description']
+                self.create_record(amount, category, date, description)
+
+    def export_to_csv(self, filename='finance.csv') -> None:
+        with open(filename, mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['ID', 'Amount', 'Category', 'Date', 'Description'])
+            for record in self.records:
+                writer.writerow([record.id, record.amount, record.category, record.date, record.description])
+
+    def save_records(self) -> None:
+        with open('finance.json', 'w', encoding='utf-8') as f:
+            json.dump([record.__dict__ for record in self.records], f, ensure_ascii=False, indent=4)
+
+    def load_records(self) -> None:
+        if os.path.exists('finance.json'):
+            with open('finance.json', 'r', encoding='utf-8') as f:
+                records_data = json.load(f)
+                self.records = [FinanceRecord(**record) for record in records_data]
 
         
         
