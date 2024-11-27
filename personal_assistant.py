@@ -598,7 +598,66 @@ class FinanceRecord:
                 records_data = json.load(f)
                 self.records = [FinanceRecord(**record) for record in records_data]
 
-        
+
+class Calculator:
+    def add(self, a: float, b: float) -> float:
+        return a + b
+
+    def subtract(self, a: float, b: float) -> float:
+        return a - b
+
+    def multiply(self, a: float, b: float) -> float:
+        return a * b
+
+    def divide(self, a: float, b: float) -> float:
+        try:
+            return a / b
+        except ValueError:
+            return "Ошибка. Деление на ноль"
+
+    def calculate(self):
+        while True:
+            print("\nВыберите операцию:")
+            print("1. Сложение")
+            print("2. Вычитание")
+            print("3. Умножение")
+            print("4. Деление")
+            print("5. Выход")
+
+            choice = input("Введите номер действия: ")
+
+            if choice == '5':
+                print("Выход в главное меню")
+                menu()
+            
+            if choice not in ['1', '2', '3', '4', '5']:
+                print("Некорректный ввод. Пожалуйста, попробуйте снова.")
+                continue
+
+            try:
+                num1 = float(input("Введите первое число: "))
+                num2 = float(input("Введите второе число: "))
+
+                if choice == '1':
+                    result = self.add(num1, num2)
+                    operation = "Сложение"
+                elif choice == '2':
+                    result = self.subtract(num1, num2)
+                    operation = "Вычитание"
+                elif choice == '3':
+                    result = self.multiply(num1, num2)
+                    operation = "Умножение"
+                elif choice == '4':
+                    result = self.divide(num1, num2)
+                    operation = "Деление"
+
+                print(f"Результат {operation}: {result}")
+
+            except ValueError as e:
+                print(f"Ошибка ввода: {e}")
+            except Exception as e:
+                print(f"Произошла ошибка: {e}")
+
         
 
         
