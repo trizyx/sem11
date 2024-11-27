@@ -17,11 +17,13 @@ def menu() -> None:
     elif choice == '4':
         manage_finances()
     elif choice == '5':
-        calculator()
+        calc = Calculator()
+        calc.calculate()
     elif choice == '6':
         print("Выход из приложения...")
     else:
         print("Некорректный ввод. Пожалуйста, попробуйте снова.")
+        choice = input("Введите номер действия: ")
 
 
 def manage_notes():
@@ -195,7 +197,7 @@ def manage_contacts():
     elif choice == '2':
         query = input("Введите имя или номер телефона для поиска: ")
         found_contacts = contact.search_contact(query)
-        
+
         if found_contacts:
             print("Найденные контакты:")
             for c in found_contacts:
@@ -629,6 +631,7 @@ class Calculator:
             if choice == '5':
                 print("Выход в главное меню")
                 menu()
+                return 0
             
             if choice not in ['1', '2', '3', '4', '5']:
                 print("Некорректный ввод. Пожалуйста, попробуйте снова.")
@@ -659,5 +662,5 @@ class Calculator:
                 print(f"Произошла ошибка: {e}")
 
         
-
-        
+if __name__ == "__main__":
+    menu()
