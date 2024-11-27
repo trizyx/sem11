@@ -165,13 +165,81 @@ def manage_tasks():
 
     elif choice == '7':
         print("Выход в главное меню")
-        return  # Возврат в главное меню
+        menu()
 
     else:
         print("Некорректный ввод. Пожалуйста, попробуйте снова.")
 
 
-    
+def manage_contacts():
+    contact = Contact(0, '')
+    contact.load_contacts()
+    message = '1. Добавление нового контакта.\n2. Поиск контакта по имени или номеру телефона.\n3. Редактирование контакта.\n4. Удаление контакта.\n5. Импорт и экспорт контактов в формате CSV.\n6. Вернуться в меню'
+    print(message)
+    choice = input("Введите номер действия: ")
+
+    if choice == '1':
+        name = input("Введите имя контакта: ")
+        phone = input("Введите номер телефона: ")
+        email = input("Введите адрес электронной почты: ")
+        
+        if not os.path.exists('contacts.json'):
+            contact_id = 1
+        else:
+            with open('contacts.json', 'r', encoding='utf-8') as f:
+                contacts_data = json.load(f)
+                contact_id = len(contacts_data) + 1
+        
+        contact.create_contact(name, phone, email)
+
+    elif choice == '2':
+        query = input("Введите имя или номер телефона для поиска: ")
+        found_contacts = contact.search_contact(query)
+        
+        if found_contacts:
+            print("Найденные контакты:")
+            for c in found_contacts:
+                print(f"ID: {c.id}, Имя: {c.name}, Телефон: {c.phone}, Email: {c.email}")
+        else:
+            print("Контакты не найдены.")
+
+    elif choice == '3':
+        contact_id = int(input("Введите ID контакта для редактирования: "))
+        for c in contact.contacts:
+            if c.id == contact_id:
+                name = input("Введите новое имя (или оставьте пустым для сохранения): ")
+                phone = input("Введите новый номер телефона (или оставьте пустым для сохранения): ")
+                email = input("Введите новый адрес электронной почты (или оставьте пустым для сохранения): ")
+                contact.edit_contact(contact_id, name or None, phone or None, email or None)
+                break
+        else:
+            print("Нет контакта с таким ID.")
+
+    elif choice == '4':
+        contact_id = int(input("Введите ID контакта для удаления: "))
+        contact.delete_contact(contact_id)
+
+    elif choice == '5':
+        msg = '\n1. Импорт\n2. Экспорт'
+        print(msg)
+        chc = input("Введите номер действия: ")
+        
+        if chc == '1':
+            filename = input("Введите название CSV файла для импорта: ")
+            contact.import_from_csv(filename)
+
+        elif chc == '2':
+            filename = input("Введите название CSV файла для экспорта: ")
+            contact.export_to_csv(filename)
+
+    elif choice == '6':
+        print("Выход в главное меню")
+        menu()
+
+    else:
+        print("Некорректный ввод. Пожалуйста, попробуйте снова.")
+
+ 
 
 class Note:
     def __init__(self, id:int, title:str, content:str, timestamp:str) -> None:
@@ -326,7 +394,74 @@ class Task:
                 self.tasks = [Task(**task) for task in tasks_data]
         
 
-        
+class Contact:
+    def __init__(self, id: int, name: str, phone: str = None, email: str = None) -> None:
+        self.id = id
+        self.name = name
+        self.phone = phone
+        self.email = email
+        self.contacts = []
+
+
+    def create_contact(self, name: str, phone: str, email: str) -> None:
+        contact_id = len(self.contacts) + 1
+        new_contact = Contact(contact_id, name, phone, email)
+        self.contacts.append(new_contact)
+        self.save_contacts()
+
+
+    def search_contact(self, query: str) -> list:
+        return [contact for contact in self.contacts if query.lower() in contact.name.lower() or (contact.phone and query in contact.phone)]
+
+
+    def edit_contact(self, contact_id: int, name: str = None, phone: str = None, email: str = None) -> None:
+        for contact in self.contacts:
+            if contact.id == contact_id:
+                if name is not None:
+                    contact.name = name
+                if phone is not None:
+                    contact.phone = phone
+                if email is not None:
+                    contact.email = email
+                self.save_contacts()
+                break
+
+
+    def delete_contact(self, contact_id: int) -> None:
+        for contact in self.contacts:
+            if contact.id == contact_id:
+                self.contacts.remove(contact)
+                self.save_contacts()
+                break
+
+
+    def import_from_csv(self, filename='contacts.csv') -> None:
+        with open(filename, mode='r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                self.create_contact(row['Name'], row['Phone'], row['Email'])
+
+
+    def export_to_csv(self, filename='contacts.csv') -> None:
+        with open(filename, mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['ID', 'Name', 'Phone', 'Email'])
+            for contact in self.contacts:
+                writer.writerow([contact.id, contact.name, contact.phone, contact.email])
+
+
+    def save_contacts(self) -> None:
+        with open('contacts.json', 'w', encoding='utf-8') as f:
+            json.dump([contact.__dict__ for contact in self.contacts], f, ensure_ascii=False, indent=4)
+
+
+    def load_contacts(self) -> None:
+        if os.path.exists('contacts.json'):
+            with open('contacts.json', 'r', encoding='utf-8') as f:
+                contacts_data = json.load(f)
+                self.contacts = [Contact(**contact) for contact in contacts_data]
+
+
         
         
 
